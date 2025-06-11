@@ -127,6 +127,8 @@ enum InputMode {
     Normal,
     AddingProject,
     AddingTodo,
+    RenamingProject,
+    RenamingTodo,
 }
 
 impl App {
@@ -277,8 +279,21 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                     }
                     KeyCode::Tab => {
                         app.active_panel = match app.active_panel {
-                            Panel::Projects => Panel::Todos,
-                            Panel::Todos => Panel::Projects,
+                            Panel::Projects => {
+                                // 切换到 Todo 面板时，确保有选中项
+                                let todos = app.get_current_todos();
+                                if !todos.is_empty() && app.todo_state.selected().is_none() {
+                                    app.todo_state.select(Some(0));
+                                }
+                                Panel::Todos
+                            },
+                            Panel::Todos => {
+                                // 切换到项目面板时，确保有选中项
+                                if !app.projects.is_empty() && app.project_state.selected().is_none() {
+                                    app.project_state.select(Some(0));
+                                }
+                                Panel::Projects
+                            },
                         };
                     }
                     KeyCode::Char('j') | KeyCode::Down => match app.active_panel {
@@ -376,6 +391,24 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                             should_save = true;
                         }
                     }
+                    KeyCode::Char('r') => {
+                        // 重命名当前选中的项目或 todo
+                        match app.active_panel {
+                            Panel::Projects => {
+                                if let Some(idx) = app.project_state.selected() {
+                                    app.input_mode = InputMode::RenamingProject;
+                                    app.input = app.projects[idx].name.clone();
+                                }
+                            }
+                            Panel::Todos => {
+                                if let (Some(project_idx), Some(todo_idx)) = 
+                                    (app.project_state.selected(), app.todo_state.selected()) {
+                                    app.input_mode = InputMode::RenamingTodo;
+                                    app.input = app.projects[project_idx].todos[todo_idx].title.clone();
+                                }
+                            }
+                        }
+                    }
                     KeyCode::Char('d') => match app.active_panel {
                         Panel::Projects => {
                             if let Some(idx) = app.project_state.selected() {
@@ -416,6 +449,11 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                                 name: app.input.clone(),
                                 todos: vec![],
                             });
+                            // 自动选中新添加的项目
+                            let new_index = app.projects.len() - 1;
+                            app.project_state.select(Some(new_index));
+                            // 清空 todo 选择，因为新项目没有 todo
+                            app.todo_state.select(None);
                             app.input.clear();
                             should_save = true;
                         }
@@ -433,6 +471,46 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                         if !app.input.is_empty() {
                             if let Some(project_idx) = app.project_state.selected() {
                                 app.projects[project_idx].todos.push(Todo::new(app.input.clone()));
+                                // 自动选中新添加的 todo
+                                let new_todo_index = app.projects[project_idx].todos.len() - 1;
+                                app.todo_state.select(Some(new_todo_index));
+                                should_save = true;
+                            }
+                            app.input.clear();
+                        }
+                        app.input_mode = InputMode::Normal;
+                    }
+                    KeyCode::Char(c) => app.input.push(c),
+                    KeyCode::Backspace => {
+                        app.input.pop();
+                    }
+                    KeyCode::Esc => app.input_mode = InputMode::Normal,
+                    _ => {}
+                },
+                InputMode::RenamingProject => match key.code {
+                    KeyCode::Enter => {
+                        if !app.input.is_empty() {
+                            if let Some(idx) = app.project_state.selected() {
+                                app.projects[idx].name = app.input.clone();
+                                should_save = true;
+                            }
+                            app.input.clear();
+                        }
+                        app.input_mode = InputMode::Normal;
+                    }
+                    KeyCode::Char(c) => app.input.push(c),
+                    KeyCode::Backspace => {
+                        app.input.pop();
+                    }
+                    KeyCode::Esc => app.input_mode = InputMode::Normal,
+                    _ => {}
+                },
+                InputMode::RenamingTodo => match key.code {
+                    KeyCode::Enter => {
+                        if !app.input.is_empty() {
+                            if let (Some(project_idx), Some(todo_idx)) = 
+                                (app.project_state.selected(), app.todo_state.selected()) {
+                                app.projects[project_idx].todos[todo_idx].title = app.input.clone();
                                 should_save = true;
                             }
                             app.input.clear();
@@ -518,8 +596,10 @@ fn ui(f: &mut Frame, app: &mut App) {
                 "未选中"
             }
         )
+    } else if terminal_width < 120 {
+        "项目 | Tab(切换) j/k(上下) a(添加) r(重命名) d(删除)".to_string()
     } else {
-        "项目".to_string()
+        "项目 | Tab(切换) j/k(上下) a(添加) r(重命名) d(删除) q(退出)".to_string()
     };
 
     let projects_list = List::new(project_items)
@@ -578,7 +658,7 @@ fn ui(f: &mut Frame, app: &mut App) {
             )
         } else {
             format!(
-                "Todo - {} | Tab(切换) j/k(上下) 空格(完成) a(添加) t(计时) d(删除) q(退出)",
+                "Todo - {} | Tab(切换) j/k(上下) 空格(完成) a(添加) r(重命名) t(计时) d(删除) q(退出)",
                 app.get_current_project().map_or("无项目", |p| &p.name)
             )
         };
@@ -605,6 +685,8 @@ fn ui(f: &mut Frame, app: &mut App) {
         let input_title = match app.input_mode {
             InputMode::AddingProject => "添加新项目",
             InputMode::AddingTodo => "添加新Todo",
+            InputMode::RenamingProject => "重命名项目",
+            InputMode::RenamingTodo => "重命名Todo",
             _ => "",
         };
 
