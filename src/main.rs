@@ -589,17 +589,15 @@ fn ui(f: &mut Frame, app: &mut App) {
 
     let projects_title = if terminal_width < 80 {
         format!(
-            "项目 [{}] | Tab切换",
+            "项目 [{}]",
             if app.active_panel == Panel::Projects {
                 "选中"
             } else {
                 "未选中"
             }
         )
-    } else if terminal_width < 120 {
-        "项目 | Tab(切换) j/k(上下) a(添加) r(重命名) d(删除)".to_string()
     } else {
-        "项目 | Tab(切换) j/k(上下) a(添加) r(重命名) d(删除) q(退出)".to_string()
+        "项目".to_string()
     };
 
     let projects_list = List::new(project_items)
@@ -647,7 +645,7 @@ fn ui(f: &mut Frame, app: &mut App) {
             })
             .collect();
 
-        let todos_title = if terminal_width < 120 {
+        let todos_title = if terminal_width < 80 {
             format!(
                 "Todo [{}]",
                 if app.active_panel == Panel::Todos {
@@ -658,7 +656,7 @@ fn ui(f: &mut Frame, app: &mut App) {
             )
         } else {
             format!(
-                "Todo - {} | Tab(切换) j/k(上下) 空格(完成) a(添加) r(重命名) t(计时) d(删除) q(退出)",
+                "Todo - {}",
                 app.get_current_project().map_or("无项目", |p| &p.name)
             )
         };
@@ -705,9 +703,9 @@ fn ui(f: &mut Frame, app: &mut App) {
         f.render_widget(input, popup_area);
     }
 
-    // 在底部显示帮助信息（当空间足够时）
-    if f.area().height > 10 && terminal_width < 80 {
-        let help_text = "快捷键: Tab(切换) j/k(上下) 空格(完成) a(添加) t(计时) d(删除) q(退出)";
+    // 在底部显示帮助信息
+    if f.area().height > 5 {
+        let help_text = "Tab(切换) j/k(上下) 空格(完成) a(添加) r(重命名) t(计时) d(删除) s(保存) q(退出)";
         let help_area = ratatui::layout::Rect {
             x: 0,
             y: f.area().height - 1,
