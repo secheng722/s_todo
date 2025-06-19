@@ -80,18 +80,57 @@ impl Todo {
     // 格式化时间显示
     fn format_duration(&self) -> String {
         let total_seconds = self.total_duration;
-        let hours = total_seconds / 3600;
+        
+        if total_seconds == 0 {
+            return String::new();
+        }
+        
+        let months = total_seconds / 2592000;  // 30天 * 24小时 * 60分钟 * 60秒 = 2592000秒 ≈ 1个月
+        let days = (total_seconds % 2592000) / 86400;  // 86400 秒 = 1 天
+        let hours = (total_seconds % 86400) / 3600;
         let minutes = (total_seconds % 3600) / 60;
         let seconds = total_seconds % 60;
         
-        if hours > 0 {
-            format!("{}h {}m {}s", hours, minutes, seconds)
-        } else if minutes > 0 {
-            format!("{}m {}s", minutes, seconds)
-        } else if total_seconds > 0 {
-            format!("{}s", seconds)
-        } else {
-            String::new()
+        match (months, days, hours, minutes, seconds) {
+            // 有月份的情况
+            (mo, d, h, _, _) if mo > 0 => {
+                match (d, h) {
+                    (d, h) if d > 0 && h > 0 => format!("{}mo {}d {}h", mo, d, h),
+                    (d, _) if d > 0 => format!("{}mo {}d", mo, d),
+                    (_, h) if h > 0 => format!("{}mo {}h", mo, h),
+                    _ => format!("{}mo", mo),
+                }
+            },
+            // 有天数的情况
+            (0, d, h, m, _) if d > 0 => {
+                match (h, m) {
+                    (h, m) if h > 0 && m > 0 => format!("{}d {}h {}m", d, h, m),
+                    (h, _) if h > 0 => format!("{}d {}h", d, h),
+                    (_, m) if m > 0 => format!("{}d {}m", d, m),
+                    _ => format!("{}d", d),
+                }
+            },
+            // 有小时的情况
+            (0, 0, h, m, s) if h > 0 => {
+                match (m, s) {
+                    (m, s) if m > 0 && s > 0 => format!("{}h {}m {}s", h, m, s),
+                    (m, _) if m > 0 => format!("{}h {}m", h, m),
+                    (_, s) if s > 0 => format!("{}h {}s", h, s),
+                    _ => format!("{}h", h),
+                }
+            },
+            // 有分钟的情况
+            (0, 0, 0, m, s) if m > 0 => {
+                if s > 0 {
+                    format!("{}m {}s", m, s)
+                } else {
+                    format!("{}m", m)
+                }
+            },
+            // 只有秒的情况
+            (0, 0, 0, 0, s) if s > 0 => format!("{}s", s),
+            // 默认情况（应该不会到达这里）
+            _ => String::new(),
         }
     }
 }
