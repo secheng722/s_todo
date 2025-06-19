@@ -11,7 +11,11 @@ use ratatui::{
     Frame, Terminal,
 };
 use serde::{Deserialize, Serialize};
-use std::{error::Error, io, time::{SystemTime, UNIX_EPOCH}};
+use std::{
+    error::Error,
+    io,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 #[derive(Clone, Serialize, Deserialize)]
 struct Todo {
@@ -19,9 +23,9 @@ struct Todo {
     description: String,
     completed: bool,
     // 时间记录字段
-    start_time: Option<u64>,    // 开始时间（时间戳）
-    end_time: Option<u64>,      // 结束时间（时间戳）
-    total_duration: u64,        // 总耗时（秒）
+    start_time: Option<u64>, // 开始时间（时间戳）
+    end_time: Option<u64>,   // 结束时间（时间戳）
+    total_duration: u64,     // 总耗时（秒）
 }
 
 impl Todo {
@@ -42,9 +46,9 @@ impl Todo {
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
-                .as_secs()
+                .as_secs(),
         );
-        self.end_time = None;  // 清除结束时间
+        self.end_time = None; // 清除结束时间
     }
 
     // 结束工作 - 记录结束时间并计算耗时
@@ -54,7 +58,7 @@ impl Todo {
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs();
-            
+
             self.end_time = Some(now);
             let session_duration = now - start;
             self.total_duration += session_duration;
@@ -80,44 +84,38 @@ impl Todo {
     // 格式化时间显示
     fn format_duration(&self) -> String {
         let total_seconds = self.total_duration;
-        
+
         if total_seconds == 0 {
             return String::new();
         }
-        
-        let months = total_seconds / 2592000;  // 30天 * 24小时 * 60分钟 * 60秒 = 2592000秒 ≈ 1个月
-        let days = (total_seconds % 2592000) / 86400;  // 86400 秒 = 1 天
+
+        let months = total_seconds / 2592000; // 30天 * 24小时 * 60分钟 * 60秒 = 2592000秒 ≈ 1个月
+        let days = (total_seconds % 2592000) / 86400; // 86400 秒 = 1 天
         let hours = (total_seconds % 86400) / 3600;
         let minutes = (total_seconds % 3600) / 60;
         let seconds = total_seconds % 60;
-        
+
         match (months, days, hours, minutes, seconds) {
             // 有月份的情况
-            (mo, d, h, _, _) if mo > 0 => {
-                match (d, h) {
-                    (d, h) if d > 0 && h > 0 => format!("{}mo {}d {}h", mo, d, h),
-                    (d, _) if d > 0 => format!("{}mo {}d", mo, d),
-                    (_, h) if h > 0 => format!("{}mo {}h", mo, h),
-                    _ => format!("{}mo", mo),
-                }
+            (mo, d, h, _, _) if mo > 0 => match (d, h) {
+                (d, h) if d > 0 && h > 0 => format!("{}mo {}d {}h", mo, d, h),
+                (d, _) if d > 0 => format!("{}mo {}d", mo, d),
+                (_, h) if h > 0 => format!("{}mo {}h", mo, h),
+                _ => format!("{}mo", mo),
             },
             // 有天数的情况
-            (0, d, h, m, _) if d > 0 => {
-                match (h, m) {
-                    (h, m) if h > 0 && m > 0 => format!("{}d {}h {}m", d, h, m),
-                    (h, _) if h > 0 => format!("{}d {}h", d, h),
-                    (_, m) if m > 0 => format!("{}d {}m", d, m),
-                    _ => format!("{}d", d),
-                }
+            (0, d, h, m, _) if d > 0 => match (h, m) {
+                (h, m) if h > 0 && m > 0 => format!("{}d {}h {}m", d, h, m),
+                (h, _) if h > 0 => format!("{}d {}h", d, h),
+                (_, m) if m > 0 => format!("{}d {}m", d, m),
+                _ => format!("{}d", d),
             },
             // 有小时的情况
-            (0, 0, h, m, s) if h > 0 => {
-                match (m, s) {
-                    (m, s) if m > 0 && s > 0 => format!("{}h {}m {}s", h, m, s),
-                    (m, _) if m > 0 => format!("{}h {}m", h, m),
-                    (_, s) if s > 0 => format!("{}h {}s", h, s),
-                    _ => format!("{}h", h),
-                }
+            (0, 0, h, m, s) if h > 0 => match (m, s) {
+                (m, s) if m > 0 && s > 0 => format!("{}h {}m {}s", h, m, s),
+                (m, _) if m > 0 => format!("{}h {}m", h, m),
+                (_, s) if s > 0 => format!("{}h {}s", h, s),
+                _ => format!("{}h", h),
             },
             // 有分钟的情况
             (0, 0, 0, m, s) if m > 0 => {
@@ -126,7 +124,7 @@ impl Todo {
                 } else {
                     format!("{}m", m)
                 }
-            },
+            }
             // 只有秒的情况
             (0, 0, 0, 0, s) if s > 0 => format!("{}s", s),
             // 默认情况（应该不会到达这里）
@@ -252,9 +250,11 @@ impl App {
 
     // 获取当前选中的 todo（可变引用）
     fn get_current_todo_mut(&mut self) -> Option<&mut Todo> {
-        if let (Some(project_idx), Some(todo_idx)) = 
-            (self.project_state.selected(), self.todo_state.selected()) {
-            self.projects.get_mut(project_idx)
+        if let (Some(project_idx), Some(todo_idx)) =
+            (self.project_state.selected(), self.todo_state.selected())
+        {
+            self.projects
+                .get_mut(project_idx)
                 .and_then(|project| project.todos.get_mut(todo_idx))
         } else {
             None
@@ -263,12 +263,13 @@ impl App {
 
     // 切换当前 todo 的计时状态
     fn toggle_current_todo_timer(&mut self) -> bool {
-        if let Some(todo) = self.get_current_todo_mut() {
-            todo.toggle_work();
-            true
-        } else {
-            false
-        }
+        self.get_current_todo_mut()
+            .filter(|todo| !todo.completed) // 只有未完成的任务才能计时
+            .map(|todo| {
+                todo.toggle_work();
+                true
+            })
+            .unwrap_or(false)
     }
 }
 
@@ -325,14 +326,16 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                                     app.todo_state.select(Some(0));
                                 }
                                 Panel::Todos
-                            },
+                            }
                             Panel::Todos => {
                                 // 切换到项目面板时，确保有选中项
-                                if !app.projects.is_empty() && app.project_state.selected().is_none() {
+                                if !app.projects.is_empty()
+                                    && app.project_state.selected().is_none()
+                                {
                                     app.project_state.select(Some(0));
                                 }
                                 Panel::Projects
-                            },
+                            }
                         };
                     }
                     KeyCode::Char('j') | KeyCode::Down => match app.active_panel {
@@ -405,12 +408,12 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                                 (app.project_state.selected(), app.todo_state.selected())
                             {
                                 let todo = &mut app.projects[project_idx].todos[todo_idx];
-                                
+
                                 // 如果正在计时且要标记为完成，自动结束计时
                                 if todo.is_working() && !todo.completed {
                                     todo.end_work();
                                 }
-                                
+
                                 // 切换完成状态
                                 todo.completed = !todo.completed;
                                 should_save = true;
@@ -440,10 +443,12 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                                 }
                             }
                             Panel::Todos => {
-                                if let (Some(project_idx), Some(todo_idx)) = 
-                                    (app.project_state.selected(), app.todo_state.selected()) {
+                                if let (Some(project_idx), Some(todo_idx)) =
+                                    (app.project_state.selected(), app.todo_state.selected())
+                                {
                                     app.input_mode = InputMode::RenamingTodo;
-                                    app.input = app.projects[project_idx].todos[todo_idx].title.clone();
+                                    app.input =
+                                        app.projects[project_idx].todos[todo_idx].title.clone();
                                 }
                             }
                         }
@@ -509,7 +514,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                     KeyCode::Enter => {
                         if !app.input.is_empty() {
                             if let Some(project_idx) = app.project_state.selected() {
-                                app.projects[project_idx].todos.push(Todo::new(app.input.clone()));
+                                app.projects[project_idx]
+                                    .todos
+                                    .push(Todo::new(app.input.clone()));
                                 // 自动选中新添加的 todo
                                 let new_todo_index = app.projects[project_idx].todos.len() - 1;
                                 app.todo_state.select(Some(new_todo_index));
@@ -547,8 +554,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                 InputMode::RenamingTodo => match key.code {
                     KeyCode::Enter => {
                         if !app.input.is_empty() {
-                            if let (Some(project_idx), Some(todo_idx)) = 
-                                (app.project_state.selected(), app.todo_state.selected()) {
+                            if let (Some(project_idx), Some(todo_idx)) =
+                                (app.project_state.selected(), app.todo_state.selected())
+                            {
                                 app.projects[project_idx].todos[todo_idx].title = app.input.clone();
                                 should_save = true;
                             }
@@ -668,12 +676,17 @@ fn ui(f: &mut Frame, app: &mut App) {
                 } else {
                     String::new()
                 };
-                
+
                 let title = if chunks[1].width < 30 {
                     // 窄屏时截断文本
                     let max_len = chunks[1].width as usize - 12;
                     if todo.title.len() > max_len {
-                        format!("{} {}{}...", status, timer_indicator, &todo.title[..max_len])
+                        format!(
+                            "{} {}{}...",
+                            status,
+                            timer_indicator,
+                            &todo.title[..max_len]
+                        )
                     } else {
                         format!("{} {}{}{}", status, timer_indicator, todo.title, time_str)
                     }
@@ -744,7 +757,8 @@ fn ui(f: &mut Frame, app: &mut App) {
 
     // 在底部显示帮助信息
     if f.area().height > 5 {
-        let help_text = "Tab(切换) j/k(上下) 空格(完成) a(添加) r(重命名) t(计时) d(删除) s(保存) q(退出)";
+        let help_text =
+            "Tab(切换) j/k(上下) 空格(完成) a(添加) r(重命名) t(计时) d(删除) s(保存) q(退出)";
         let help_area = ratatui::layout::Rect {
             x: 0,
             y: f.area().height - 1,
